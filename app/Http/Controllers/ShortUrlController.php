@@ -17,7 +17,24 @@ class ShortUrlController extends Controller
         $query = ShortUrl::query()->with(['user', 'company'])->latest();
 
         if ($user->isAdmin()) {
-            $query->where('company_id', $user->company_id);
+            // $query->where('company_id', $user->company_id);
+            $query->where(function ($q) use ($user) {
+
+                $q->where(function ($q) use ($user) {
+                    // Admin ke apne URLs
+                    $q->where('company_id', $user->company_id)
+                    ->where('user_id', $user->id);
+                })
+                ->orWhere(function ($q) use ($user) {
+                    // Same company ke members ke URLs
+                    $q->where('company_id', $user->company_id)
+                    ->whereHas('user', function ($q) {
+                        $q->where('role', 'member');
+                    });
+                });
+
+            });
+
         } elseif ($user->isMember()) {
             $query->where('user_id', $user->id);
         }
